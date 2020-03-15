@@ -1,6 +1,8 @@
 #ifndef MAGICCHESS_DRIVER_CONFIG_H
 #define MAGICCHESS_DRIVER_CONFIG_H
 
+#define DEBUG_MODE
+
 /* Steppers */
 // Pins X
 #define S_X1 8
@@ -31,9 +33,20 @@
 // I2C Address
 #define I2C_ADR 2
 
+// Electromagnet pin
+#define MAGNET 12
+
 /* Chessboard settings (in mm) */
-#define X_HOME 215
+// Field 0 (left storage)
+#define X_HOME 243
 #define Y_HOME 24
+// Field 1 (chessboard)
+#define X_HOME 73
+#define Y_HOME 24
+// Field 2 (right storage)
+#define X_HOME 22
+#define Y_HOME 24
+// Cell width
 #define CELL_W 20
 /* ----- */
 

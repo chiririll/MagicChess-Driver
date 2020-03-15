@@ -2,8 +2,10 @@
 
 // Step vars
 short getPos = 0; // reading position
-short cFrom[2], cTo[2]; // cell from and to
-short fFrom, fTo; // field from and to
+short from[3], to[3]; // 0 - x, 1 - y, 2 - field
+
+// Current position
+short nowPos[2];
 
 void I2C_send() {
     Wire.beginTransmission(0);
@@ -13,48 +15,66 @@ void I2C_send() {
 
 // Getting step from ESP
 void getStep() {
-    switch (getPos) {
-        case 0:
-            cFrom[0] = short(Wire.read());
-            break;
-        case 1:
-            cFrom[1] = short(Wire.read());
-            break;
-        case 2:
-            fFrom = short(Wire.read());
-            break;
-        case 3:
-            cTo[0] = short(Wire.read());
-            break;
-        case 4:
-            cTo[1] = short(Wire.read());
-            break;
-        case 5:
-            fTo = short(Wire.read());
-            break;
-    }
+    if (getPos < 3)
+        from[getPos] = short(Wire.read());
+    else
+        to[getPos - 3] = short(Wire.read());
     getPos++;
 }
 
 // Return electromagnet to start position
 void goHome() {
+    digitalWrite(MAGNET, LOW);
     bool atHomeX = false;
     bool atHomeY = false;
     while (!atHomeX || !atHomeY) {
         if (digitalRead(trX) == HIGH)
-            sX.step(xSteps);
+            sX.step(1);
         else
             atHomeX = true;
 
         if (digitalRead(trY) == HIGH)
-            sY.step(ySteps);
+            sY.step(1);
         else
             atHomeY = true;
     }
+    nowPos[0] = 0;
+    nowPos[1] = 0;
+
+    I2C_send();
 }
 
 void makeStep() {
-    // TODO: make function
+    debug("Moving from (" + str(from[0]) + "; " + str(from[1]) + ") to (" + str(to[0]) + "; " + str(to[1]) + ")");
+    // Cleaning counter
+    getPos = 0;
+    // Disabling magnet
+    digitalWrite(MAGNET, LOW);
+    // Go to start point
+    sX.step((from[0] - nowPos[0]) * SPR_X / (3.1416 * 2 * X_RAD));
+    sY.step((from[1] - nowPos[1]) * SPR_Y / (3.1416 * 2 * Y_RAD));
+    // Changing now position var
+    nowPos[0] = from[0];
+    nowPos[1] = from[1];
+    // Enabling Magnet
+    digitalWrite(MAGNET, HIGH);
+    // Go to target point
+    sX.step((to[0] - nowPos[0]) * SPR_X / (3.1416 * 2 * X_RAD));
+    sY.step((to[1] - nowPos[1]) * SPR_Y / (3.1416 * 2 * Y_RAD));
+    // Changing now position var
+    nowPos[0] = to[0];
+    nowPos[1] = to[1];
+    // Disabling magnet
+    digitalWrite(MAGNET, LOW);
+    // Saying ready
+    I2C_send();
+    debug("Done!")
+}
+
+void debug(String str) {
+#ifdef DEBUG_MODE
+    Serial.println(str);
+#endif
 }
 
 void setup() {
@@ -73,14 +93,31 @@ void setup() {
     pinMode(trX, INPUT_PULLUP);
     pinMode(trY, INPUT_PULLUP);
 
+    // Electromagnet
+    pinMode(MAGNET, OUTPUT);
+    digitalWrite(MAGNET, LOW);
+
     goHome();
 
     // Ready to receive commands
     I2C_send();
+    debug("Ready!");
 }
 
 void loop() {
     if (getPos >= 6)
         makeStep();
+
+    #ifdef DEBUG_MODE
+    else {
+        if (Serial.available() > 0) {
+            if (getPos < 3)
+                from[getPos] = short(Serial.read());
+            else
+                to[getPos - 3] = short(Serial.read());
+            getPos++;
+        }
+    }
+    #endif
 }
 
