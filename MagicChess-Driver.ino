@@ -24,6 +24,7 @@ void getStep() {
 
 // Return electromagnet to start position
 void goHome() {
+    debug("Returning home...");
     digitalWrite(MAGNET, LOW);
     bool atHomeX = false;
     bool atHomeY = false;
@@ -42,10 +43,11 @@ void goHome() {
     nowPos[1] = 0;
 
     I2C_send();
+    debug("Done!");
 }
 
 void makeStep() {
-    debug("Moving from (" + str(from[0]) + "; " + str(from[1]) + ") to (" + str(to[0]) + "; " + str(to[1]) + ")");
+    debug("Moving from (" + String(from[0]) + "; " + String(from[1]) + ") to (" + String(to[0]) + "; " + String(to[1]) + ")");
     // Cleaning counter
     getPos = 0;
     // Disabling magnet
@@ -68,7 +70,7 @@ void makeStep() {
     digitalWrite(MAGNET, LOW);
     // Saying ready
     I2C_send();
-    debug("Done!")
+    debug("Done!");
 }
 
 void debug(String str) {
@@ -83,7 +85,7 @@ void setup() {
 
     // I2C
     Wire.begin(I2C_ADR);
-    Wire.onReceive(getStep());
+    Wire.onReceive(getStep);
 
     // Steppers
     sX.setSpeed(SPEED_X);
@@ -120,4 +122,3 @@ void loop() {
     }
     #endif
 }
-
