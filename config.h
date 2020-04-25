@@ -21,13 +21,18 @@
 #define SPEED_X 60
 #define SPEED_Y 60
 // Radius (in mm)
-#define X_RAD 10
-#define Y_RAD 15
+#define X_LEN 28.2743	// Diameter = 9
+#define Y_LEN 47.1239	// Diameter = 15
 /* ----- */
 
 /* Trailers */
-#define trX 2
-#define trY 3
+#define trX 13
+#define trY 2
+/* ----- */
+
+/* Sound */
+#define SOUND 3		// Sound pin
+#define S_DELAY 100 // Delay between tones (in ms)
 /* ----- */
 
 // I2C Address
@@ -37,15 +42,10 @@
 #define MAGNET 12
 
 /* Chessboard settings (in mm) */
-// Field 0 (left storage)
-#define X_HOME 243
-#define Y_HOME 24
-// Field 1 (chessboard)
-#define X_HOME 73
-#define Y_HOME 24
-// Field 2 (right storage)
-#define X_HOME 22
-#define Y_HOME 24
+// Fields {0, 1, 2}
+const int X_HOME[3] = {22, 74, 246};
+const int Y_HOME[3] = {22, 22, 22};
+
 // Cell width
 #define CELL_W 20
 /* ----- */

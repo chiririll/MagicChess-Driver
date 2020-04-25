@@ -9,10 +9,12 @@
 #include "config.h"
 
 // Functions
+void goToTile(int x, int y, int field);
 void getStep();
 void I2C_send();
 void goHome();
 void makeStep();
+void makeStep(int xFrom, int yFrom, int xTo, int yTo);
 
 //  Steppers
 Stepper sX(SPR_X, S_X1, S_X2, S_X3, S_X4);

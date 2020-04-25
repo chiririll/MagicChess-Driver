@@ -1,25 +1,30 @@
 #include "main.h"
 
-// Step vars
-short getPos = 0; // reading position
-short from[3], to[3]; // 0 - x, 1 - y, 2 - field
-
 // Current position
 short nowPos[2];
+short freeStor[3] = {0, 0, 0};
 
-void I2C_send() {
+
+void I2C_ready() {
     Wire.beginTransmission(0);
     Wire.write('1');
     Wire.endTransmission();
 }
 
 // Getting step from ESP
-void getStep() {
-    if (getPos < 3)
-        from[getPos] = short(Wire.read());
-    else
-        to[getPos - 3] = short(Wire.read());
-    getPos++;
+void getCmd(int count) {
+    String cmd = "";
+    for (int i = 0; i < count; i++) {
+        cmd += Wire.read();
+    }
+    
+    if (cmd[0] == 'M')
+        makeStep((int)cmd[1], (int)cmd[2], (int)cmd[3], (int)cmd[4]);
+    else if (cmd[0] == 'R')
+        removeFigure((int)cmd[1], (int)cmd[2]);
+    else {
+        // TODO: add freq to array
+    }
 }
 
 // Return electromagnet to start position
@@ -42,35 +47,62 @@ void goHome() {
     nowPos[0] = 0;
     nowPos[1] = 0;
 
-    I2C_send();
+    I2C_ready();
     debug("Done!");
 }
 
-void makeStep() {
-    debug("Moving from (" + String(from[0]) + "; " + String(from[1]) + ") to (" + String(to[0]) + "; " + String(to[1]) + ")");
-    // Cleaning counter
-    getPos = 0;
+void goToTile(int x, int y, int field) {
+    int target[2] = {CELL_W * x + X_HOME[field], CELL_W * y + Y_HOME[field] };
+    
+    if (target[0] > nowPos[0])
+        sX.step((target[0] - nowPos[0]) / X_LEN * SPR_X);
+    else
+        sX.step((nowPos[0] - target[0]) / X_LEN * SPR_X);
+
+    nowPos[0] = target[0];
+
+    if (target[1] > nowPos[1])
+        sX.step((target[1] - nowPos[1]) / Y_LEN * SPR_Y);
+    else
+        sX.step((nowPos[1] - target[1]) / Y_LEN * SPR_Y);
+
+    nowPos[1] = target[1];
+}
+
+void makeStep(int xFrom, int yFrom, int xTo, int yTo) {
+    debug("Moving from (" + String(xFrom) + "; " + String(yFrom) + ") to (" + String(xTo) + "; " + String(yTo) + ")");
+
     // Disabling magnet
     digitalWrite(MAGNET, LOW);
     // Go to start point
-    sX.step((from[0] - nowPos[0]) * SPR_X / (3.1416 * 2 * X_RAD));
-    sY.step((from[1] - nowPos[1]) * SPR_Y / (3.1416 * 2 * Y_RAD));
-    // Changing now position var
-    nowPos[0] = from[0];
-    nowPos[1] = from[1];
+    goToTile(xFrom, yFrom, 1);
     // Enabling Magnet
     digitalWrite(MAGNET, HIGH);
     // Go to target point
-    sX.step((to[0] - nowPos[0]) * SPR_X / (3.1416 * 2 * X_RAD));
-    sY.step((to[1] - nowPos[1]) * SPR_Y / (3.1416 * 2 * Y_RAD));
-    // Changing now position var
-    nowPos[0] = to[0];
-    nowPos[1] = to[1];
+    goToTile(xTo, yTo, 1);
     // Disabling magnet
     digitalWrite(MAGNET, LOW);
     // Saying ready
-    I2C_send();
+    I2C_ready();
     debug("Done!");
+}
+
+void removeFigure(int x, int y) {
+    digitalWrite(MAGNET, LOW);
+    goToTile(x, y, 1);
+
+    digitalWrite(MAGNET, HIGH);
+    goToTile(freeStor[0], freeStor[1], freeStor[2]);
+    digitalWrite(MAGNET, LOW);
+
+    if (freeStor[0] >= 1) {
+        if (freeStor[1] >= 7) {
+            freeStor[1] = 0;
+            freeStor[2] = 1;
+        } else
+            freeStor[1]++;
+        freeStor[0] = 0;
+    }
 }
 
 void debug(String str) {
@@ -85,7 +117,7 @@ void setup() {
 
     // I2C
     Wire.begin(I2C_ADR);
-    Wire.onReceive(getStep);
+    Wire.onReceive(getCmd);
 
     // Steppers
     sX.setSpeed(SPEED_X);
@@ -102,23 +134,10 @@ void setup() {
     goHome();
 
     // Ready to receive commands
-    I2C_send();
+    I2C_ready();
     debug("Ready!");
 }
 
 void loop() {
-    if (getPos >= 6)
-        makeStep();
 
-    #ifdef DEBUG_MODE
-    else {
-        if (Serial.available() > 0) {
-            if (getPos < 3)
-                from[getPos] = short(Serial.read());
-            else
-                to[getPos - 3] = short(Serial.read());
-            getPos++;
-        }
-    }
-    #endif
 }
